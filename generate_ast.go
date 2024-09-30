@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 )
@@ -26,9 +27,9 @@ func defineAst(outputDir, baseName string, types []AstType) error {
 	write("package expressions\n\n")
 	write("import \"github.com/Atul-Ranjan12/token\"\n\n")
 
-	// Define the Expr interface
-	write("type Expr interface {\n")
-	write("\tAccept(visitor ExprVisitor) (interface{}, error)\n")
+	// Define the base interface (Expr or Stmt)
+	write("type %s interface {\n", baseName)
+	write("\tAccept(visitor %sVisitor) (interface{}, error)\n", baseName)
 	write("}\n\n")
 
 	// Define the Visitor interface
@@ -43,7 +44,7 @@ func defineAst(outputDir, baseName string, types []AstType) error {
 }
 
 func defineVisitor(write func(string, ...interface{}), baseName string, types []AstType) {
-	write("type ExprVisitor interface {\n")
+	write("type %sVisitor interface {\n", baseName)
 	for _, t := range types {
 		typeName := t.name
 		write("\tVisit%s%s(%s *%s) (interface{}, error)\n", typeName, baseName, strings.ToLower(baseName), typeName)
@@ -52,7 +53,7 @@ func defineVisitor(write func(string, ...interface{}), baseName string, types []
 }
 
 func defineType(write func(string, ...interface{}), baseName string, t AstType) {
-	write("// Tese are functions for %s \n", t.name)
+	write("// These are functions for %s \n", t.name)
 
 	write("type %s struct {\n", t.name)
 	for _, field := range t.fields {
@@ -60,20 +61,34 @@ func defineType(write func(string, ...interface{}), baseName string, t AstType) 
 	}
 	write("}\n\n")
 
-	write("var _ Expr = (*%s)(nil)\n\n", t.name)
+	write("var _ %s = (*%s)(nil)\n\n", baseName, t.name)
 
 	// Define Accept method
-	write("func (e *%s) Accept(visitor ExprVisitor) (interface{}, error) {\n", t.name)
+	write("func (e *%s) Accept(visitor %sVisitor) (interface{}, error) {\n", t.name, baseName)
 	write("\treturn visitor.Visit%s%s(e)\n", t.name, baseName)
 	write("}\n\n")
 }
 
 func main() {
 	outputDir := "parser/expressions"
-	defineAst(outputDir, "Expr", []AstType{
+
+	err := defineAst(outputDir, "Expr", []AstType{
 		{"Binary", []string{"Left Expr", "Operator token.Token", "Right Expr"}},
 		{"Grouping", []string{"Expression Expr"}},
 		{"Literal", []string{"Value interface{}"}},
 		{"Unary", []string{"Operator token.Token", "Right Expr"}},
 	})
+	if err != nil {
+		log.Fatalf("Error generating Expr AST: %v", err)
+	}
+
+	err = defineAst(outputDir, "Stmt", []AstType{
+		{"Expression", []string{"Expression Expr"}},
+		{"Print", []string{"Expression Expr"}},
+	})
+	if err != nil {
+		log.Fatalf("Error generating Stmt AST: %v", err)
+	}
+
+	log.Println("Successfully generated ASTs at:", outputDir)
 }
