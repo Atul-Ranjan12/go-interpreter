@@ -3,7 +3,6 @@ package parser
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Atul-Ranjan12/errorHandler"
 	"github.com/Atul-Ranjan12/parser/expressions"
@@ -11,24 +10,27 @@ import (
 )
 
 // Grammar for lang
-//
+
 // Grammar for lang
-// program -> statement* EOF ;
-// statement -> exprStatement | printStatement ;
+// program -> declaration* EOF ;
+// statement -> exprStatement | printStatement | block;
+// block -> { declaration* }
+// declaration -> varDeclaration | statement ;
+// varDeclaration -> var + IDENTIFIER + ( = expression )? ;
 // exprStatement -> expression ;
 // printStatement -> print ( expression ) ;
-//
-//
+
 // Grammar for expressions
-//
-// expression -> equality
+
+// expression -> assignment
+// assignment -> IDENTIFIER = assignment | equality
 // equality -> comparison ( ( != | == ) comparison)*
 // comparison -> term ( ( > | >= | < | <= ) term )*
 // term -> factor ( ( / | * ) factor)*
 // factor -> unary ( ( + | - ) unary)*
 // unary -> ( ! | - ) unary | primary
 // primary -> NUMBER | STRING | "true" | "false" | "nil"
-// 			  | "(" expression ")"
+// 			  | "(" expression ")" | identifier
 
 // Parser represents the parser for lang
 type Parser struct {
@@ -47,9 +49,45 @@ func NewParser(tokens []*token.Token) *Parser {
 	}
 }
 
+// Assignment function handles the assingment operation
+func (p *Parser) Assignment() (expressions.Expr, error) {
+	// Handle the left hand side of the operation normally
+	// This should go down to returning that it is an identifier
+	// precisely expressions.Variable
+	expr, err := p.Equality()
+	if err != nil {
+		return nil, err
+	}
+
+	// Could be an assignment
+	if p.Match(token.EQUAL) {
+		// Save the equals token
+		_ = p.Prev()
+		// Parse the right hand side of the assignment
+		right, err := p.Assignment()
+		if err != nil {
+			return nil, err
+		}
+		// Check if the assignment target is valid
+		v, ok := expr.(*expressions.Variable)
+		if !ok {
+			// Not a valid assignment
+			return nil, errors.New("Invalid assignment target")
+		}
+		// Valid assignment
+		name := v.Name
+		return &expressions.Assign{
+			Name:  name,
+			Value: right,
+		}, nil
+	}
+
+	return expr, nil
+}
+
 // Expression is the root of the tree
 func (p *Parser) Expression() (expressions.Expr, error) {
-	return p.Equality()
+	return p.Assignment()
 }
 
 // Equality checks if an expression is equality
@@ -176,6 +214,10 @@ func (p *Parser) Primary() (expressions.Expr, error) {
 		return &expressions.Literal{Value: p.Prev().Literal}, nil
 	}
 
+	if p.Match(token.IDENTIFIER) {
+		return &expressions.Variable{Name: *p.Prev()}, nil
+	}
+
 	if p.Match(token.LEFT_PAREN) {
 		expr, err := p.Expression()
 		if err != nil {
@@ -189,6 +231,42 @@ func (p *Parser) Primary() (expressions.Expr, error) {
 	// Here we have reached the EOF with incomplete parse
 	err := p.Error(p.Peek(), "Expect expression.")
 	return nil, err
+}
+
+// Declaration handles each line of the program
+func (p *Parser) Declaration() (expressions.Stmt, error) {
+	if p.Match(token.VAR) {
+		return p.VariableDeclaration()
+	}
+
+	return p.Statement()
+}
+
+// VariableDeclaration checks a variable declaration
+func (p *Parser) VariableDeclaration() (expressions.Stmt, error) {
+	// Check if it has a valid identifier
+	name, err := p.Consume(token.IDENTIFIER, "Expect variable name")
+	if err != nil {
+		return nil, err
+	}
+
+	// Check if it has an equals after the identifier
+	var expression expressions.Expr = nil
+	if p.Match(token.EQUAL) {
+		expression, err = p.Expression()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		return nil, errors.New("Expect = after var identifier")
+	}
+
+	// Check if it ends with a semicolon
+	_, err = p.Consume(token.SEMICOLON, "Expect ; after variable declaration")
+	return &expressions.Var{
+		Name:        *name,
+		Initializer: expression,
+	}, err
 }
 
 // Consume checks if the current token is of the particular
@@ -243,7 +321,7 @@ func (p *Parser) Advance() *token.Token {
 		p.Current++
 	}
 
-	log.Println("Reaching here: this is p.Prev: ", p.Prev())
+	// log.Println("Reaching here: this is p.Prev: ", p.Prev())
 	return p.Prev()
 }
 
@@ -263,15 +341,18 @@ func (p *Parser) Prev() *token.Token {
 }
 
 // Parse function parses the tokens
-func (p *Parser) Parse() (expressions.Expr, error) {
-	expr, err := p.Expression()
-	if err != nil {
-		return nil, err
+func (p *Parser) Parse() ([]expressions.Stmt, error) {
+	var statements []expressions.Stmt
+	// Parse every statement
+	for !p.IsAtEnd() {
+		declarationStatement, err := p.Declaration()
+		if err != nil {
+			return nil, err
+		}
+		statements = append(statements, declarationStatement)
 	}
-	if !p.IsAtEnd() {
-		return nil, p.Error(p.Peek(), "Unexpected tokens after expression")
-	}
-	return expr, nil
+
+	return statements, nil
 }
 
 // synchronize discards tokens until it finds a likely statement boundary

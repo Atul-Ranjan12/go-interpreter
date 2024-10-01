@@ -2,18 +2,33 @@ package interpreter
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 
+	"github.com/Atul-Ranjan12/environment"
 	"github.com/Atul-Ranjan12/parser/expressions"
 	"github.com/Atul-Ranjan12/token"
 )
 
 // Interpreter struct represents the interpreter
 type Interpreter struct {
+	// Takes the environment class instance
+	Environment *environment.Environment
+}
+
+// NewInterpreter is the initializer for ther interpreter
+func NewInterpreter() *Interpreter {
+	// Create new environment
+	interpreterEnvironment := environment.NewEnvironment(nil)
+
+	return &Interpreter{
+		Environment: interpreterEnvironment,
+	}
 }
 
 // Interpreter implements the expressionVisitor interface
 var _ expressions.ExprVisitor = (*Interpreter)(nil)
+var _ expressions.StmtVisitor = (*Interpreter)(nil)
 
 func (i *Interpreter) RuntimeError(token token.Token, message string) error {
 	return fmt.Errorf("Runtime Error at '%v': %s", token.Lexeme, message)
@@ -24,13 +39,20 @@ func (i *Interpreter) Evaluate(expr expressions.Expr) (interface{}, error) {
 	return expr.Accept(i)
 }
 
+// Execute is the method for all statements
+func (i *Interpreter) Execute(expr expressions.Stmt) (interface{}, error) {
+	return expr.Accept(i)
+}
+
 // Interpret evaluates the expression and returns the result as a string
-func (i *Interpreter) Interpret(expression expressions.Expr) (string, error) {
-	result, err := i.Evaluate(expression)
-	if err != nil {
-		return "", err
+func (i *Interpreter) Interpret(statements []expressions.Stmt) error {
+	for _, statement := range statements {
+		_, err := i.Execute(statement)
+		if err != nil {
+			return err
+		}
 	}
-	return i.stringify(result), nil
+	return nil
 }
 
 // stringify converts a value to its string representation
@@ -98,6 +120,7 @@ func (i *Interpreter) VisitBinaryExpr(expr *expressions.Binary) (interface{}, er
 
 // VisitGroupingExpr handles Grouping Operations
 func (i *Interpreter) VisitGroupingExpr(expr *expressions.Grouping) (interface{}, error) {
+	log.Println("Reached grouping expression")
 	return i.Evaluate(expr.Expression)
 }
 
@@ -124,6 +147,28 @@ func (i *Interpreter) VisitUnaryExpr(expr *expressions.Unary) (interface{}, erro
 // VisitLiteralExpr handles literal operations
 func (i *Interpreter) VisitLiteralExpr(expr *expressions.Literal) (interface{}, error) {
 	return expr.Value, nil
+}
+
+// VisitExprStatement evaluates each expression statement
+func (i *Interpreter) VisitExprStatementStmt(stmt *expressions.ExprStatement) (interface{}, error) {
+	_, err := i.Evaluate(stmt.Expression)
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// VisitPrintStatement evaluates each print statement
+func (i *Interpreter) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (interface{}, error) {
+
+	value, err := i.Evaluate(stmt.Expression)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(value)
+	return nil, nil
 }
 
 // IsNumber checks if an object is a number
@@ -160,4 +205,74 @@ func (i *Interpreter) IsEqual(a, b interface{}) bool {
 		return false
 	}
 	return reflect.DeepEqual(a, b)
+}
+
+// VisitVariableExpr implements the missing method for ExprVisitor
+func (i *Interpreter) VisitVariableExpr(expr *expressions.Variable) (interface{}, error) {
+
+	value, err := i.Environment.Get(&expr.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
+}
+
+// VisitVarStmt implements the missing method for StmtVisitor
+func (i *Interpreter) VisitVarStmt(stmt *expressions.Var) (interface{}, error) {
+	// Here we evaluate the value of the initializer
+	// if it has the initializer, else we put nil
+	var value interface{}
+	var err error
+	if stmt.Initializer != nil {
+		value, err = i.Evaluate(stmt.Initializer)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	i.Environment.Define(stmt.Name.Lexeme, value)
+	return value, nil
+}
+
+func (i *Interpreter) VisitAssignExpr(expr *expressions.Assign) (interface{}, error) {
+	value, err := i.Evaluate(expr.Value)
+	if err != nil {
+		return nil, err
+	}
+	// Assign in the environment
+	i.Environment.Assign(expr.Name, value)
+
+	return value, nil
+}
+
+func (i *Interpreter) VisitBlockStmt(block *expressions.Block) (interface{}, error) {
+	err := i.ExecuteBlock(block.Statements, environment.NewEnvironment(i.Environment))
+	if err != nil {
+		return nil, err
+	}
+	return nil, nil
+}
+
+func (i *Interpreter) ExecuteBlock(statements []expressions.Stmt, environment *environment.Environment) error {
+	prev := i.Environment
+
+	// Update the current environment
+	i.Environment = environment
+	// This did work too I guess
+	// Put the old environment as the enclosing environment
+	// i.Environment.Enclosing = prev
+
+	// Execute all the statements in the block
+	for _, statement := range statements {
+		_, err := i.Execute(statement)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Restore the environment
+	i.Environment = prev
+
+	return nil
 }

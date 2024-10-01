@@ -7,10 +7,24 @@ type Expr interface {
 }
 
 type ExprVisitor interface {
+	VisitAssignExpr(expr *Assign) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
+	VisitVariableExpr(expr *Variable) (interface{}, error)
+}
+
+// These are functions for Assign 
+type Assign struct {
+	Name token.Token
+	Value Expr
+}
+
+var _ Expr = (*Assign)(nil)
+
+func (e *Assign) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitAssignExpr(e)
 }
 
 // These are functions for Binary 
@@ -58,5 +72,16 @@ var _ Expr = (*Unary)(nil)
 
 func (e *Unary) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitUnaryExpr(e)
+}
+
+// These are functions for Variable 
+type Variable struct {
+	Name token.Token
+}
+
+var _ Expr = (*Variable)(nil)
+
+func (e *Variable) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitVariableExpr(e)
 }
 

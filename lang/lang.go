@@ -23,9 +23,10 @@ func NewLang(source string) *Lang {
 
 	// Lex the source for tokens
 	tokens := lang.Lexer.ScanTokens()
-	// Parse the tokens
+	// Initialize the parser
 	lang.Parser = parser.NewParser(tokens)
-
+	// Initialize the interpreter
+	lang.Interpreter = interpreter.NewInterpreter()
 	return lang
 }
 

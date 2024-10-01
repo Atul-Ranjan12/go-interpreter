@@ -51,6 +51,14 @@ func (p *ASTPrinter) VisitGroupingExpr(expr *expressions.Grouping) (interface{},
 	return p.parenthesize("group", expr.Expression)
 }
 
+func (p *ASTPrinter) VisitExprStatementExpr(expr *expressions.ExprStatement) (interface{}, error) {
+	return p.parenthesize("expression-statement", expr.Expression)
+}
+
+func (p *ASTPrinter) VisitPrintStatementExpr(expr *expressions.PrintStatement) (interface{}, error) {
+	return p.parenthesize("print-statement", expr.Expression)
+}
+
 func (p *ASTPrinter) VisitLiteralExpr(expr *expressions.Literal) (interface{}, error) {
 	if expr.Value == nil {
 		return "nil", nil

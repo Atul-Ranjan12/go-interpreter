@@ -73,21 +73,24 @@ func main() {
 	outputDir := "parser/expressions"
 
 	err := defineAst(outputDir, "Expr", []AstType{
+		{"Assign", []string{"Name token.Token", "Value Expr"}},
 		{"Binary", []string{"Left Expr", "Operator token.Token", "Right Expr"}},
 		{"Grouping", []string{"Expression Expr"}},
 		{"Literal", []string{"Value interface{}"}},
 		{"Unary", []string{"Operator token.Token", "Right Expr"}},
+		{"Variable", []string{"Name token.Token"}},
 	})
 	if err != nil {
 		log.Fatalf("Error generating Expr AST: %v", err)
 	}
-
 	err = defineAst(outputDir, "Stmt", []AstType{
-		{"Expression", []string{"Expression Expr"}},
-		{"Print", []string{"Expression Expr"}},
+		{"Block", []string{"Statements []Stmt"}},
+		{"ExprStatement", []string{"Expression Expr"}},
+		{"PrintStatement", []string{"Expression Expr"}},
+		{"Var", []string{"Name token.Token", "Initializer Expr"}},
 	})
 	if err != nil {
-		log.Fatalf("Error generating Stmt AST: %v", err)
+		log.Fatalf("Error generating Expr AST: %v", err)
 	}
 
 	log.Println("Successfully generated ASTs at:", outputDir)

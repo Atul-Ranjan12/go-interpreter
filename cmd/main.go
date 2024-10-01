@@ -1,13 +1,10 @@
 package main
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 
 	"github.com/Atul-Ranjan12/lang"
-	"github.com/Atul-Ranjan12/parser/astprinter"
-	"github.com/Atul-Ranjan12/token"
 )
 
 // Interperter Main
@@ -39,29 +36,21 @@ func main() {
 	lang := lang.NewLang(string(content))
 
 	// Parse
-	expression, err := lang.Parser.Parse()
+	statements, err := lang.Parser.Parse()
 	if err != nil {
 		log.Println("An error occured while parsing: ", err)
 		return
 	}
 
-	// Print each token
-	for _, t := range lang.Lexer.Tokens {
-		fmt.Printf("%s %s %v\n", token.TokenTypeToString(t.Type), t.Lexeme, t.Literal)
-	}
+	log.Println("Printing statements: ", statements)
+	log.Println("Successful parse ")
+	log.Println("\nOutput")
 
-	log.Println("\n\nPrinting the output from the parser")
-
-	printer := astprinter.NewAstPrinter()
-	fmt.Println(printer.Print(expression))
-
-	// Evaluating the output
-	log.Println("\n\nInterpreting the expressions")
-	result, err := lang.Interpreter.Interpret(expression)
+	err = lang.Interpreter.Interpret(statements)
 	if err != nil {
-		log.Println("Error in interpretation: ", err)
-		return
+		log.Println("Interpretation Error: ", err)
 	}
 
-	log.Println(result)
+	log.Println("Program execution successful")
+
 }
