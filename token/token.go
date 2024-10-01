@@ -7,11 +7,12 @@ import (
 // These are the standard Keywords for the language
 var Keywords = map[string]TokenType{
 	"and":    AND,
+	"break":  BREAK,
 	"class":  CLASS,
 	"else":   ELSE,
 	"false":  FALSE,
 	"for":    FOR,
-	"fn":     FUN,
+	"fun":    FUN,
 	"if":     IF,
 	"nil":    NIL,
 	"or":     OR,

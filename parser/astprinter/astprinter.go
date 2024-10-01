@@ -93,6 +93,18 @@ func ExampleASTPrinter() {
 	// Output: (* (- 123) (group 45.67))
 }
 
+func (p *ASTPrinter) VisitAssignExpr(expr *expressions.Assign) (interface{}, error) {
+	return p.parenthesize("=", expr.Value)
+}
+
+func (p *ASTPrinter) VisitLogicalExpr(expr *expressions.Logical) (interface{}, error) {
+	return p.parenthesize(expr.Operator.Lexeme, expr.Left, expr.Right)
+}
+
+func (p *ASTPrinter) VisitVariableExpr(expr *expressions.Variable) (interface{}, error) {
+	return expr.Name.Lexeme, nil
+}
+
 func main() {
 	ExampleASTPrinter()
 }

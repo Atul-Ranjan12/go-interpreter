@@ -8,11 +8,13 @@ type Expr interface {
 
 type ExprVisitor interface {
 	VisitAssignExpr(expr *Assign) (interface{}, error)
+	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
 	VisitVariableExpr(expr *Variable) (interface{}, error)
+	VisitBreakExprExpr(expr *BreakExpr) (interface{}, error)
 }
 
 // These are functions for Assign 
@@ -25,6 +27,19 @@ var _ Expr = (*Assign)(nil)
 
 func (e *Assign) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitAssignExpr(e)
+}
+
+// These are functions for Logical 
+type Logical struct {
+	Left Expr
+	Right Expr
+	Operator token.Token
+}
+
+var _ Expr = (*Logical)(nil)
+
+func (e *Logical) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitLogicalExpr(e)
 }
 
 // These are functions for Binary 
@@ -83,5 +98,15 @@ var _ Expr = (*Variable)(nil)
 
 func (e *Variable) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitVariableExpr(e)
+}
+
+// These are functions for BreakExpr 
+type BreakExpr struct {
+}
+
+var _ Expr = (*BreakExpr)(nil)
+
+func (e *BreakExpr) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitBreakExprExpr(e)
 }
 

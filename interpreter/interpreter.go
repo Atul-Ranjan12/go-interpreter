@@ -1,8 +1,8 @@
 package interpreter
 
 import (
+	"errors"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/Atul-Ranjan12/environment"
@@ -120,7 +120,6 @@ func (i *Interpreter) VisitBinaryExpr(expr *expressions.Binary) (interface{}, er
 
 // VisitGroupingExpr handles Grouping Operations
 func (i *Interpreter) VisitGroupingExpr(expr *expressions.Grouping) (interface{}, error) {
-	log.Println("Reached grouping expression")
 	return i.Evaluate(expr.Expression)
 }
 
@@ -161,7 +160,6 @@ func (i *Interpreter) VisitExprStatementStmt(stmt *expressions.ExprStatement) (i
 
 // VisitPrintStatement evaluates each print statement
 func (i *Interpreter) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (interface{}, error) {
-
 	value, err := i.Evaluate(stmt.Expression)
 	if err != nil {
 		return nil, err
@@ -209,7 +207,6 @@ func (i *Interpreter) IsEqual(a, b interface{}) bool {
 
 // VisitVariableExpr implements the missing method for ExprVisitor
 func (i *Interpreter) VisitVariableExpr(expr *expressions.Variable) (interface{}, error) {
-
 	value, err := i.Environment.Get(&expr.Name)
 	if err != nil {
 		return nil, err
@@ -235,6 +232,7 @@ func (i *Interpreter) VisitVarStmt(stmt *expressions.Var) (interface{}, error) {
 	return value, nil
 }
 
+// VisitAssignExpr handles interpretation of an assignment
 func (i *Interpreter) VisitAssignExpr(expr *expressions.Assign) (interface{}, error) {
 	value, err := i.Evaluate(expr.Value)
 	if err != nil {
@@ -246,6 +244,7 @@ func (i *Interpreter) VisitAssignExpr(expr *expressions.Assign) (interface{}, er
 	return value, nil
 }
 
+// VisitBlockStmt handles the interpretation of a block
 func (i *Interpreter) VisitBlockStmt(block *expressions.Block) (interface{}, error) {
 	err := i.ExecuteBlock(block.Statements, environment.NewEnvironment(i.Environment))
 	if err != nil {
@@ -254,6 +253,7 @@ func (i *Interpreter) VisitBlockStmt(block *expressions.Block) (interface{}, err
 	return nil, nil
 }
 
+// ExecuteBlock executes a block
 func (i *Interpreter) ExecuteBlock(statements []expressions.Stmt, environment *environment.Environment) error {
 	prev := i.Environment
 
@@ -275,4 +275,95 @@ func (i *Interpreter) ExecuteBlock(statements []expressions.Stmt, environment *e
 	i.Environment = prev
 
 	return nil
+}
+
+// VisitIfStmt handles the execution of an if else block
+func (i *Interpreter) VisitIfStmt(statement *expressions.If) (interface{}, error) {
+	condition, err := i.Evaluate(statement.Condition)
+	if err != nil {
+		return nil, err
+	}
+
+	// If the condition is true we evaluate the if then block
+	if i.IsTruthy(condition) {
+		_, err = i.Execute(statement.ThenBranch)
+		if err != nil {
+			return nil, err
+		}
+	} else if statement.ElseBranch != nil {
+		_, err = i.Execute(statement.ElseBranch)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
+}
+
+// VisitLogicalExpr handles the execution of logical statements
+func (i *Interpreter) VisitLogicalExpr(expr *expressions.Logical) (interface{}, error) {
+	// Evaluate the left section of the exrpression
+	left, err := i.Evaluate(expr.Left)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for if the logical expression is OR
+	// or AND
+	if expr.Operator.Type == token.OR {
+		// Or expression :: Short circuit the or expression
+		// i.e if left is true return immediately
+		if i.IsTruthy(left) {
+			return left, nil
+		}
+	} else {
+		// And expression :: Short circuit the and expression
+		// i.e if left is false, return left (false) immediately
+		if !i.IsTruthy(left) {
+			return left, nil
+		}
+	}
+
+	// If we reach here, it means that it is an
+	// or expression where left = false, or an
+	// and expression where left = true. Therefore,
+	// the value depends on what is the value of the right
+	// expression
+	right, err := i.Evaluate(expr.Right)
+	if err != nil {
+		return nil, err
+	}
+	return right, nil
+}
+
+// VisitWhileStatementStmt handles execution of while statements
+func (i *Interpreter) VisitWhileStatementStmt(stmt *expressions.WhileStatement) (interface{}, error) {
+	for {
+		val, err := i.Evaluate(stmt.Condition)
+		if err != nil {
+			return nil, err
+		}
+
+		if !i.IsTruthy(val) {
+			break
+		}
+
+		_, err = i.Execute(stmt.Body)
+		if err != nil {
+
+			// Check if a break statement was issued
+			if err.Error() == "CODE_999_LOOP_BREAK" {
+				break
+			}
+
+			// We had some other error
+			return nil, err
+		}
+	}
+
+	return nil, nil
+}
+
+func (i *Interpreter) VisitBreakExprExpr(expr *expressions.BreakExpr) (interface{}, error) {
+	return nil, errors.New("CODE_999_LOOP_BREAK")
 }

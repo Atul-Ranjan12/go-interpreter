@@ -27,7 +27,7 @@ import (
 
 func main() {
 	// Read the contents of test.rnj
-	content, err := ioutil.ReadFile("test.rnj")
+	content, err := ioutil.ReadFile("test.lang")
 	if err != nil {
 		log.Fatalf("Error reading file: %v", err)
 	}
@@ -42,9 +42,9 @@ func main() {
 		return
 	}
 
-	log.Println("Printing statements: ", statements)
-	log.Println("Successful parse ")
-	log.Println("\nOutput")
+	// log.Println("Printing statements: ", statements)
+	// log.Println("Successful parse ")
+	// log.Println("\nOutput")
 
 	err = lang.Interpreter.Interpret(statements)
 	if err != nil {

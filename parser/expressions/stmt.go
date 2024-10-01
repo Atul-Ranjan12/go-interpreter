@@ -10,7 +10,9 @@ type StmtVisitor interface {
 	VisitBlockStmt(stmt *Block) (interface{}, error)
 	VisitExprStatementStmt(stmt *ExprStatement) (interface{}, error)
 	VisitPrintStatementStmt(stmt *PrintStatement) (interface{}, error)
+	VisitWhileStatementStmt(stmt *WhileStatement) (interface{}, error)
 	VisitVarStmt(stmt *Var) (interface{}, error)
+	VisitIfStmt(stmt *If) (interface{}, error)
 }
 
 // These are functions for Block 
@@ -46,6 +48,18 @@ func (e *PrintStatement) Accept(visitor StmtVisitor) (interface{}, error) {
 	return visitor.VisitPrintStatementStmt(e)
 }
 
+// These are functions for WhileStatement 
+type WhileStatement struct {
+	Condition Expr
+	Body Stmt
+}
+
+var _ Stmt = (*WhileStatement)(nil)
+
+func (e *WhileStatement) Accept(visitor StmtVisitor) (interface{}, error) {
+	return visitor.VisitWhileStatementStmt(e)
+}
+
 // These are functions for Var 
 type Var struct {
 	Name token.Token
@@ -56,5 +70,18 @@ var _ Stmt = (*Var)(nil)
 
 func (e *Var) Accept(visitor StmtVisitor) (interface{}, error) {
 	return visitor.VisitVarStmt(e)
+}
+
+// These are functions for If 
+type If struct {
+	Condition Expr
+	ThenBranch Stmt
+	ElseBranch Stmt
+}
+
+var _ Stmt = (*If)(nil)
+
+func (e *If) Accept(visitor StmtVisitor) (interface{}, error) {
+	return visitor.VisitIfStmt(e)
 }
 

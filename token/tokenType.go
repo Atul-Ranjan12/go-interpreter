@@ -34,6 +34,7 @@ const (
 	// Keywords
 	AND
 	CLASS
+	BREAK
 	ELSE
 	FALSE
 	FUN
