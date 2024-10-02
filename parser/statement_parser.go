@@ -30,6 +30,11 @@ func (p *Parser) Statement() (expressions.Stmt, error) {
 		return p.ForStatement()
 	}
 
+	// Match for the return statement
+	if p.Match(token.RETURN) {
+		return p.ReturnStatement()
+	}
+
 	// Match left brace (block)
 	if p.Match(token.LEFT_BRACE) {
 		// Return the block
@@ -92,7 +97,10 @@ func (p *Parser) Block() ([]expressions.Stmt, error) {
 
 	// Check for the right brace
 	_, err := p.Consume(token.RIGHT_BRACE, "Expect '}' after a block")
-	return statements, err
+	if err != nil {
+		return nil, err
+	}
+	return statements, nil
 }
 
 // ExprStatement parses an Expression statement
@@ -105,10 +113,13 @@ func (p *Parser) ExprStatement() (expressions.Stmt, error) {
 
 	// Check for semicolon at the end
 	_, err = p.Consume(token.SEMICOLON, "Expect ; at the end of statement")
+	if err != nil {
+		return nil, err
+	}
 
 	return &expressions.ExprStatement{
 		Expression: value,
-	}, err
+	}, nil
 }
 
 // PrintStatement parses a print statement
@@ -158,4 +169,125 @@ func (p *Parser) WhileStatement() (expressions.Stmt, error) {
 		Condition: condition,
 		Body:      body,
 	}, nil
+}
+
+// Or function handles the parsing of or logical expressions
+func (p *Parser) Or() (expressions.Expr, error) {
+	// Parse the left operations
+	left, err := p.And()
+	if err != nil {
+		return nil, err
+	}
+
+	if p.Match(token.OR) {
+		operator := p.Prev()
+		right, err := p.And()
+		if err != nil {
+			return nil, err
+		}
+
+		return &expressions.Logical{
+			Left:     left,
+			Operator: *operator,
+			Right:    right,
+		}, nil
+	}
+
+	// Reaching here means there is no or
+	return left, nil
+}
+
+// And function handles parsing the and operations
+func (p *Parser) And() (expressions.Expr, error) {
+	// Parse the left expression
+	left, err := p.Equality()
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the right expression
+	if p.Match(token.AND) {
+		operator := p.Prev()
+		right, err := p.Equality()
+		if err != nil {
+			return nil, err
+		}
+
+		return &expressions.Logical{
+			Left:     left,
+			Operator: *operator,
+			Right:    right,
+		}, nil
+	}
+
+	// Reaching here means there is no and
+	return left, nil
+}
+
+// ForStatement parses a for statement by converting it
+// to a while statement
+func (p *Parser) ForStatement() (expressions.Stmt, error) {
+	p.Consume(token.LEFT_PAREN, "Expect '(' after 'for'.")
+
+	var initializer expressions.Stmt
+	var err error
+	if p.Match(token.SEMICOLON) {
+		initializer = nil
+	} else if p.Match(token.VAR) {
+		initializer, err = p.VariableDeclaration()
+	} else {
+		initializer, err = p.Statement()
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var condition expressions.Expr
+	if !p.Check(token.SEMICOLON) {
+		condition, err = p.Expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	p.Consume(token.SEMICOLON, "Expect ';' after loop condition.")
+
+	var increment expressions.Expr
+	if !p.Check(token.RIGHT_PAREN) {
+		increment, err = p.Expression()
+		if err != nil {
+			return nil, err
+		}
+	}
+	p.Consume(token.RIGHT_PAREN, "Expect ')' after for clauses.")
+
+	body, err := p.Statement()
+	if err != nil {
+		return nil, err
+	}
+
+	// Desugar for loop into while loop
+	if increment != nil {
+		body = &expressions.Block{
+			Statements: []expressions.Stmt{
+				body,
+				&expressions.ExprStatement{Expression: increment},
+			},
+		}
+	}
+
+	if condition == nil {
+		condition = &expressions.Literal{Value: true}
+	}
+	body = &expressions.WhileStatement{
+		Condition: condition,
+		Body:      body,
+	}
+
+	if initializer != nil {
+		body = &expressions.Block{
+			Statements: []expressions.Stmt{initializer, body},
+		}
+	}
+
+	return body, nil
 }

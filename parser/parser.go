@@ -13,12 +13,16 @@ import (
 
 // Grammar for lang
 // program -> declaration* EOF ;
-// statement -> ifsStatement | exprStatement | printStatement | forStatement | whileStatement | block;
+// statement -> ifStatement | exprStatement | printStatement | forStatement | whileStatement | returnStatements | block;
+// returnStatement -> return expression ;
 // forStatement -> for ( varDeclaration | expression ; expression? ; expression? ) statement;
 // whileStatement -> while ( expression ) statement ;
 // ifStatement -> if ( expression ) statement (else statement)?
 // block -> { declaration* }
-// declaration -> varDeclaration | statement | breakStatement ;
+// declaration -> funcDeclaration | varDeclaration | statement | breakStatement ;
+// funcDeclaration -> fun function ;
+// function -> IDENTIFIER ( parameters? );
+// parameters -> IDENTIFIER ( , IDENTIFIER )*
 // breakStatement -> break ;
 // varDeclaration -> var + IDENTIFIER + ( = expression )? ;
 // exprStatement -> expression ;
@@ -34,7 +38,9 @@ import (
 // comparison -> term ( ( > | >= | < | <= ) term )*
 // term -> factor ( ( / | * ) factor)*
 // factor -> unary ( ( + | - ) unary)*
-// unary -> ( ! | - ) unary | primary
+// unary -> ( ! | - ) unary | call
+// call -> primary ( arguments? )* ;
+// arguments -> expression ( , expression )* ;
 // primary -> NUMBER | STRING | "true" | "false" | "nil"
 // 			  | "(" expression ")" | identifier
 
@@ -201,7 +207,8 @@ func (p *Parser) Unary() (expressions.Expr, error) {
 		}, nil
 	}
 
-	return p.Primary()
+	// Could also be a function call now
+	return p.Call()
 }
 
 // Primary checks if an expression is primary
@@ -245,6 +252,9 @@ func (p *Parser) Primary() (expressions.Expr, error) {
 
 // Declaration handles each line of the program
 func (p *Parser) Declaration() (expressions.Stmt, error) {
+	if p.Match(token.FUN) {
+		return p.Function("function")
+	}
 	if p.Match(token.VAR) {
 		return p.VariableDeclaration()
 	}
@@ -381,123 +391,4 @@ func (p *Parser) synchronize() {
 
 		p.Advance()
 	}
-}
-
-// Or function handles the parsing of or logical expressions
-func (p *Parser) Or() (expressions.Expr, error) {
-	// Parse the left operations
-	left, err := p.And()
-	if err != nil {
-		return nil, err
-	}
-
-	if p.Match(token.OR) {
-		operator := p.Prev()
-		right, err := p.And()
-		if err != nil {
-			return nil, err
-		}
-
-		return &expressions.Logical{
-			Left:     left,
-			Operator: *operator,
-			Right:    right,
-		}, nil
-	}
-
-	// Reaching here means there is no or
-	return left, nil
-}
-
-// And function handles parsing the and operations
-func (p *Parser) And() (expressions.Expr, error) {
-	// Parse the left expression
-	left, err := p.Equality()
-	if err != nil {
-		return nil, err
-	}
-
-	// Parse the right expression
-	if p.Match(token.AND) {
-		operator := p.Prev()
-		right, err := p.Equality()
-		if err != nil {
-			return nil, err
-		}
-
-		return &expressions.Logical{
-			Left:     left,
-			Operator: *operator,
-			Right:    right,
-		}, nil
-	}
-
-	// Reaching here means there is no and
-	return left, nil
-}
-
-func (p *Parser) ForStatement() (expressions.Stmt, error) {
-	p.Consume(token.LEFT_PAREN, "Expect '(' after 'for'.")
-
-	var initializer expressions.Stmt
-	var err error
-	if p.Match(token.SEMICOLON) {
-		initializer = nil
-	} else if p.Match(token.VAR) {
-		initializer, err = p.VariableDeclaration()
-	} else {
-		initializer, err = p.Statement()
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var condition expressions.Expr
-	if !p.Check(token.SEMICOLON) {
-		condition, err = p.Expression()
-		if err != nil {
-			return nil, err
-		}
-	}
-	p.Consume(token.SEMICOLON, "Expect ';' after loop condition.")
-
-	var increment expressions.Expr
-	if !p.Check(token.RIGHT_PAREN) {
-		increment, err = p.Expression()
-		if err != nil {
-			return nil, err
-		}
-	}
-	p.Consume(token.RIGHT_PAREN, "Expect ')' after for clauses.")
-
-	body, err := p.Statement()
-	if err != nil {
-		return nil, err
-	}
-
-	// Desugar for loop into while loop
-	if increment != nil {
-		body = &expressions.Block{
-			Statements: []expressions.Stmt{
-				body,
-				&expressions.ExprStatement{Expression: increment},
-			},
-		}
-	}
-
-	if condition == nil {
-		condition = &expressions.Literal{Value: true}
-	}
-	body = &expressions.WhileStatement{
-		Condition: condition,
-		Body:      body,
-	}
-
-	if initializer != nil {
-		body = &expressions.Block{
-			Statements: []expressions.Stmt{initializer, body},
-		}
-	}
-
-	return body, nil
 }

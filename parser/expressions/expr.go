@@ -10,6 +10,7 @@ type ExprVisitor interface {
 	VisitAssignExpr(expr *Assign) (interface{}, error)
 	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
+	VisitCallExpr(expr *Call) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
@@ -53,6 +54,19 @@ var _ Expr = (*Binary)(nil)
 
 func (e *Binary) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitBinaryExpr(e)
+}
+
+// These are functions for Call 
+type Call struct {
+	Callee Expr
+	Paren token.Token
+	Arguments []Expr
+}
+
+var _ Expr = (*Call)(nil)
+
+func (e *Call) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitCallExpr(e)
 }
 
 // These are functions for Grouping 

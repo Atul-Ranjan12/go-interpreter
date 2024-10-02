@@ -1,24 +1,12 @@
-var a = 1;
-var b = a;
-print a + b;
-
-if (a + b < 100) {
-    print "yes";
-}else {
-    print "no";
-}
-
-var i = 0;
-while (i < 10) {
-
-    if (i > 4) {
-        break;
-    }
-
-    print "inside while loop";
+fun makeCounter() {
+  var i = 0;
+  fun count() {
     i = i + 1;
+    print i;
+  }
+
+  return count;
 }
 
-for (var j =  0; j < 10; j = j + 1) {
-    print "inside for loop";
-}
+var func = makeCounter();
+func();

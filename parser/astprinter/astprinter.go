@@ -14,8 +14,9 @@ func NewAstPrinter() *ASTPrinter {
 	return &ASTPrinter{}
 }
 
-// Specify explicitly to implement ExprVisitor
+// Specify explicitly to implement ExprVisitor and StmtVisitor
 var _ expressions.ExprVisitor = (*ASTPrinter)(nil)
+var _ expressions.StmtVisitor = (*ASTPrinter)(nil)
 
 func (p *ASTPrinter) parenthesize(name string, exprs ...expressions.Expr) (string, error) {
 	var builder strings.Builder
@@ -24,11 +25,15 @@ func (p *ASTPrinter) parenthesize(name string, exprs ...expressions.Expr) (strin
 	builder.WriteString(name)
 	for _, expr := range exprs {
 		builder.WriteString(" ")
-		component, err := expr.Accept(p)
-		if err != nil {
-			return "", err
+		if expr != nil {
+			component, err := expr.Accept(p)
+			if err != nil {
+				return "", err
+			}
+			builder.WriteString(component.(string))
+		} else {
+			builder.WriteString("nil")
 		}
-		builder.WriteString(component.(string))
 	}
 	builder.WriteString(")")
 
@@ -41,6 +46,75 @@ func (p *ASTPrinter) Print(expr expressions.Expr) (string, error) {
 		return "", err
 	}
 	return result.(string), nil
+}
+
+// Existing ExprVisitor methods...
+
+// New StmtVisitor methods
+
+func (p *ASTPrinter) VisitBlockStmt(stmt *expressions.Block) (interface{}, error) {
+	var builder strings.Builder
+	builder.WriteString("(block")
+	for _, statement := range stmt.Statements {
+		builder.WriteString(" ")
+		result, err := statement.Accept(p)
+		if err != nil {
+			return nil, err
+		}
+		builder.WriteString(result.(string))
+	}
+	builder.WriteString(")")
+	return builder.String(), nil
+}
+
+func (p *ASTPrinter) VisitExprStatementStmt(stmt *expressions.ExprStatement) (interface{}, error) {
+	return p.parenthesize("expr", stmt.Expression)
+}
+
+func (p *ASTPrinter) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (interface{}, error) {
+	return p.parenthesize("print", stmt.Expression)
+}
+
+func (p *ASTPrinter) VisitWhileStatementStmt(stmt *expressions.WhileStatement) (interface{}, error) {
+	condition, err := stmt.Condition.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	body, err := stmt.Body.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	return fmt.Sprintf("(while %s %s)", condition, body), nil
+}
+
+func (p *ASTPrinter) VisitVarStmt(stmt *expressions.Var) (interface{}, error) {
+	if stmt.Initializer == nil {
+		return fmt.Sprintf("(var %s)", stmt.Name.Lexeme), nil
+	}
+	initializer, err := stmt.Initializer.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	return fmt.Sprintf("(var %s %s)", stmt.Name.Lexeme, initializer), nil
+}
+
+func (p *ASTPrinter) VisitIfStmt(stmt *expressions.If) (interface{}, error) {
+	condition, err := stmt.Condition.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	thenBranch, err := stmt.ThenBranch.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	if stmt.ElseBranch != nil {
+		elseBranch, err := stmt.ElseBranch.Accept(p)
+		if err != nil {
+			return nil, err
+		}
+		return fmt.Sprintf("(if %s %s %s)", condition, thenBranch, elseBranch), nil
+	}
+	return fmt.Sprintf("(if %s %s)", condition, thenBranch), nil
 }
 
 func (p *ASTPrinter) VisitBinaryExpr(expr *expressions.Binary) (interface{}, error) {
@@ -103,6 +177,50 @@ func (p *ASTPrinter) VisitLogicalExpr(expr *expressions.Logical) (interface{}, e
 
 func (p *ASTPrinter) VisitVariableExpr(expr *expressions.Variable) (interface{}, error) {
 	return expr.Name.Lexeme, nil
+}
+
+func (p *ASTPrinter) VisitBreakExprExpr(expr *expressions.BreakExpr) (interface{}, error) {
+	return "break", nil
+}
+
+func (p *ASTPrinter) VisitCallExpr(expr *expressions.Call) (interface{}, error) {
+	args := make([]expressions.Expr, len(expr.Arguments)+1)
+	args[0] = expr.Callee
+	copy(args[1:], expr.Arguments)
+	return p.parenthesize("call", args...)
+}
+
+func (p *ASTPrinter) VisitFunctionStmt(stmt *expressions.Function) (interface{}, error) {
+	var builder strings.Builder
+	builder.WriteString("(fun ")
+	builder.WriteString(stmt.Name.Lexeme)
+	builder.WriteString(" (")
+
+	for i, param := range stmt.Params {
+		if i > 0 {
+			builder.WriteString(" ")
+		}
+		builder.WriteString(param.Lexeme)
+	}
+
+	builder.WriteString(") ")
+
+	for _, bodyStmt := range stmt.Body {
+		result, err := bodyStmt.Accept(p)
+		if err != nil {
+			return nil, err
+		}
+		builder.WriteString(result.(string))
+		builder.WriteString(" ")
+	}
+
+	builder.WriteString(")")
+
+	return builder.String(), nil
+}
+
+func (p *ASTPrinter) VisitReturnStmt(stmt *expressions.Return) (interface{}, error) {
+	return p.parenthesize("return", stmt.Value)
 }
 
 func main() {

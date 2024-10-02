@@ -76,6 +76,7 @@ func main() {
 		{"Assign", []string{"Name token.Token", "Value Expr"}},
 		{"Logical", []string{"Left Expr", "Right Expr", "Operator token.Token"}},
 		{"Binary", []string{"Left Expr", "Operator token.Token", "Right Expr"}},
+		{"Call", []string{"Callee Expr", "Paren token.Token", "Arguments []Expr"}},
 		{"Grouping", []string{"Expression Expr"}},
 		{"Literal", []string{"Value interface{}"}},
 		{"Unary", []string{"Operator token.Token", "Right Expr"}},
@@ -89,9 +90,11 @@ func main() {
 		{"Block", []string{"Statements []Stmt"}},
 		{"ExprStatement", []string{"Expression Expr"}},
 		{"PrintStatement", []string{"Expression Expr"}},
+		{"Return", []string{"Keyword token.Token", "Value Expr"}},
 		{"WhileStatement", []string{"Condition Expr", "Body Stmt"}},
 		{"Var", []string{"Name token.Token", "Initializer Expr"}},
 		{"If", []string{"Condition Expr", "ThenBranch Stmt", "ElseBranch Stmt"}},
+		{"Function", []string{"Name token.Token", "Params []token.Token", "Body []Stmt"}},
 	})
 	if err != nil {
 		log.Fatalf("Error generating Expr AST: %v", err)

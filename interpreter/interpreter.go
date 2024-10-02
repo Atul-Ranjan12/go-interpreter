@@ -13,17 +13,35 @@ import (
 // Interpreter struct represents the interpreter
 type Interpreter struct {
 	// Takes the environment class instance
+	// Set up a global Environment
+	Globals     *environment.Environment
 	Environment *environment.Environment
+}
+
+func (i *Interpreter) Define(env *environment.Environment, callable Callable, callableName string) {
+	env.Define(callableName, callable)
 }
 
 // NewInterpreter is the initializer for ther interpreter
 func NewInterpreter() *Interpreter {
 	// Create new environment
-	interpreterEnvironment := environment.NewEnvironment(nil)
+	globalEnvironment := environment.NewEnvironment(nil)
+	// If it does not exist on the interpreter environment
+	// it should be in the global environment, hence
+	// global environment is an enclosing of the interpreter
+	// environment
+	interpreterEnvironment := environment.NewEnvironment(globalEnvironment)
 
-	return &Interpreter{
+	// Define the interpreter
+	i := &Interpreter{
+		Globals:     globalEnvironment,
 		Environment: interpreterEnvironment,
 	}
+
+	// Define the native functions
+	i.Define(i.Globals, &Clock{}, "clock")
+
+	return i
 }
 
 // Interpreter implements the expressionVisitor interface
@@ -263,16 +281,24 @@ func (i *Interpreter) ExecuteBlock(statements []expressions.Stmt, environment *e
 	// Put the old environment as the enclosing environment
 	// i.Environment.Enclosing = prev
 
+	// Always return to the old environment
+	defer func() { i.Environment = prev }()
+
 	// Execute all the statements in the block
 	for _, statement := range statements {
 		_, err := i.Execute(statement)
 		if err != nil {
+			// If the statement executed turned out to be
+			// a return statement
+			_, ok := err.(*ReturnValue)
+			if ok {
+				return err
+			}
 			return err
 		}
 	}
 
 	// Restore the environment
-	i.Environment = prev
 
 	return nil
 }

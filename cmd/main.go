@@ -1,11 +1,41 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
+	"strings"
 
 	"github.com/Atul-Ranjan12/lang"
+	"github.com/Atul-Ranjan12/parser/astprinter"
+	"github.com/Atul-Ranjan12/parser/expressions"
 )
+
+func printAST(stmt expressions.Stmt, depth int) {
+	printer := astprinter.NewAstPrinter()
+	result, err := stmt.Accept(printer)
+	if err != nil {
+		log.Printf("Error printing AST: %v", err)
+		return
+	}
+
+	indent := strings.Repeat("  ", depth)
+	fmt.Printf("%s%s\n", indent, result)
+
+	switch s := stmt.(type) {
+	case *expressions.Block:
+		for _, subStmt := range s.Statements {
+			printAST(subStmt, depth+1)
+		}
+	case *expressions.If:
+		printAST(s.ThenBranch, depth+1)
+		if s.ElseBranch != nil {
+			printAST(s.ElseBranch, depth+1)
+		}
+	case *expressions.WhileStatement:
+		printAST(s.Body, depth+1)
+	}
+}
 
 // Interperter Main
 
@@ -40,6 +70,11 @@ func main() {
 	if err != nil {
 		log.Println("An error occured while parsing: ", err)
 		return
+	}
+
+	fmt.Println("AST Structure:")
+	for _, statement := range statements {
+		printAST(statement, 0)
 	}
 
 	// log.Println("Printing statements: ", statements)
