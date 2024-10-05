@@ -7,12 +7,14 @@ import (
 	"github.com/Atul-Ranjan12/interpreter"
 	"github.com/Atul-Ranjan12/lexer"
 	"github.com/Atul-Ranjan12/parser"
+	"github.com/Atul-Ranjan12/resolver"
 )
 
 type Lang struct {
 	HadError    bool
 	Lexer       *lexer.Lexer // The language has a lexer
 	Parser      *parser.Parser
+	Resolver    *resolver.Resolver
 	Interpreter *interpreter.Interpreter
 }
 
@@ -27,6 +29,8 @@ func NewLang(source string) *Lang {
 	lang.Parser = parser.NewParser(tokens)
 	// Initialize the interpreter
 	lang.Interpreter = interpreter.NewInterpreter()
+	// Initialize the resolver
+	lang.Resolver = resolver.NewResolver(lang.Interpreter)
 	return lang
 }
 

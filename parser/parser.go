@@ -19,7 +19,7 @@ import (
 // whileStatement -> while ( expression ) statement ;
 // ifStatement -> if ( expression ) statement (else statement)?
 // block -> { declaration* }
-// declaration -> funcDeclaration | varDeclaration | statement | breakStatement ;
+// declaration -> funcDeclaration | classDeclaration | varDeclaration | statement | breakStatement ;
 // funcDeclaration -> fun function ;
 // function -> IDENTIFIER ( parameters? );
 // parameters -> IDENTIFIER ( , IDENTIFIER )*

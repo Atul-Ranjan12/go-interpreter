@@ -15,7 +15,8 @@ type Interpreter struct {
 	// Takes the environment class instance
 	// Set up a global Environment
 	Globals     *environment.Environment
-	Environment *environment.Environment
+	Environment *environment.Environment // Current environment
+	Locals      map[expressions.Expr]int
 }
 
 func (i *Interpreter) Define(env *environment.Environment, callable Callable, callableName string) {
@@ -30,12 +31,12 @@ func NewInterpreter() *Interpreter {
 	// it should be in the global environment, hence
 	// global environment is an enclosing of the interpreter
 	// environment
-	interpreterEnvironment := environment.NewEnvironment(globalEnvironment)
 
 	// Define the interpreter
 	i := &Interpreter{
 		Globals:     globalEnvironment,
-		Environment: interpreterEnvironment,
+		Environment: globalEnvironment,
+		Locals:      make(map[expressions.Expr]int),
 	}
 
 	// Define the native functions
@@ -47,6 +48,20 @@ func NewInterpreter() *Interpreter {
 // Interpreter implements the expressionVisitor interface
 var _ expressions.ExprVisitor = (*Interpreter)(nil)
 var _ expressions.StmtVisitor = (*Interpreter)(nil)
+
+// Adds in values in the locals map
+func (i *Interpreter) Resolve(expr expressions.Expr, depth int) {
+	i.Locals[expr] = depth
+}
+
+// LookUpVariable looks up a variable in the locals map
+func (i *Interpreter) LookupVariable(name *token.Token, expr expressions.Expr) (interface{}, error) {
+	distance, ok := i.Locals[expr]
+	if !ok {
+		return i.Globals.Get(name)
+	}
+	return i.Environment.GetAt(distance, name.Lexeme), nil
+}
 
 func (i *Interpreter) RuntimeError(token token.Token, message string) error {
 	return fmt.Errorf("Runtime Error at '%v': %s", token.Lexeme, message)
@@ -178,6 +193,7 @@ func (i *Interpreter) VisitExprStatementStmt(stmt *expressions.ExprStatement) (i
 
 // VisitPrintStatement evaluates each print statement
 func (i *Interpreter) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (interface{}, error) {
+	// log.Println("Reaching here for print statement: ")
 	value, err := i.Evaluate(stmt.Expression)
 	if err != nil {
 		return nil, err
@@ -225,7 +241,7 @@ func (i *Interpreter) IsEqual(a, b interface{}) bool {
 
 // VisitVariableExpr implements the missing method for ExprVisitor
 func (i *Interpreter) VisitVariableExpr(expr *expressions.Variable) (interface{}, error) {
-	value, err := i.Environment.Get(&expr.Name)
+	value, err := i.LookupVariable(&expr.Name, expr)
 	if err != nil {
 		return nil, err
 	}
@@ -256,14 +272,23 @@ func (i *Interpreter) VisitAssignExpr(expr *expressions.Assign) (interface{}, er
 	if err != nil {
 		return nil, err
 	}
+
+	distance, ok := i.Locals[expr]
+	if !ok {
+		i.Environment.Assign(expr.Name, value)
+	} else {
+		// Assign at the particular scope
+		i.Environment.AssignAt(distance, &expr.Name, value)
+	}
+
 	// Assign in the environment
-	i.Environment.Assign(expr.Name, value)
 
 	return value, nil
 }
 
 // VisitBlockStmt handles the interpretation of a block
 func (i *Interpreter) VisitBlockStmt(block *expressions.Block) (interface{}, error) {
+	// log.Println("This is called second")
 	err := i.ExecuteBlock(block.Statements, environment.NewEnvironment(i.Environment))
 	if err != nil {
 		return nil, err
@@ -271,34 +296,17 @@ func (i *Interpreter) VisitBlockStmt(block *expressions.Block) (interface{}, err
 	return nil, nil
 }
 
-// ExecuteBlock executes a block
 func (i *Interpreter) ExecuteBlock(statements []expressions.Stmt, environment *environment.Environment) error {
-	prev := i.Environment
-
-	// Update the current environment
+	previous := i.Environment
 	i.Environment = environment
-	// This did work too I guess
-	// Put the old environment as the enclosing environment
-	// i.Environment.Enclosing = prev
+	defer func() { i.Environment = previous }()
 
-	// Always return to the old environment
-	defer func() { i.Environment = prev }()
-
-	// Execute all the statements in the block
 	for _, statement := range statements {
 		_, err := i.Execute(statement)
 		if err != nil {
-			// If the statement executed turned out to be
-			// a return statement
-			_, ok := err.(*ReturnValue)
-			if ok {
-				return err
-			}
 			return err
 		}
 	}
-
-	// Restore the environment
 
 	return nil
 }

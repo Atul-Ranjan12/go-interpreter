@@ -11,7 +11,7 @@ import (
 	"github.com/Atul-Ranjan12/parser/expressions"
 )
 
-func printAST(stmt expressions.Stmt, depth int) {
+func PrintAST(stmt expressions.Stmt, depth int) {
 	printer := astprinter.NewAstPrinter()
 	result, err := stmt.Accept(printer)
 	if err != nil {
@@ -25,15 +25,15 @@ func printAST(stmt expressions.Stmt, depth int) {
 	switch s := stmt.(type) {
 	case *expressions.Block:
 		for _, subStmt := range s.Statements {
-			printAST(subStmt, depth+1)
+			PrintAST(subStmt, depth+1)
 		}
 	case *expressions.If:
-		printAST(s.ThenBranch, depth+1)
+		PrintAST(s.ThenBranch, depth+1)
 		if s.ElseBranch != nil {
-			printAST(s.ElseBranch, depth+1)
+			PrintAST(s.ElseBranch, depth+1)
 		}
 	case *expressions.WhileStatement:
-		printAST(s.Body, depth+1)
+		PrintAST(s.Body, depth+1)
 	}
 }
 
@@ -74,12 +74,19 @@ func main() {
 
 	fmt.Println("AST Structure:")
 	for _, statement := range statements {
-		printAST(statement, 0)
+		PrintAST(statement, 0)
 	}
 
 	// log.Println("Printing statements: ", statements)
 	// log.Println("Successful parse ")
 	// log.Println("\nOutput")
+
+	// Resolve it here
+	err = lang.Resolver.ResolveStatements(statements)
+	if err != nil {
+		log.Println("Error in resolving the code: ", err)
+		return
+	}
 
 	err = lang.Interpreter.Interpret(statements)
 	if err != nil {

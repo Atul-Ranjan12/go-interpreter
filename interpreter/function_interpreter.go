@@ -33,6 +33,7 @@ func (r *ReturnValue) Error() string {
 // The Call function handles function calls
 func (i *Interpreter) VisitCallExpr(expr *expressions.Call) (interface{}, error) {
 	// Evaluate the callee
+	// log.Println("This is called second")
 	callee, err := i.Evaluate(expr.Callee)
 	if err != nil {
 		return nil, err
@@ -91,29 +92,38 @@ func (f *Function) ToString() string {
 }
 
 // Call handles the calling of funciton
-func (f *Function) Call(i *Interpreter, args []interface{}) (interface{}, error) {
-	env := environment.NewEnvironment(f.Closure)
+func (f *Function) Call(i *Interpreter, arguments []interface{}) (interface{}, error) {
+	// Create a new environment for this function call
+	environment := environment.NewEnvironment(f.Closure)
 
-	for i := 0; i < len(args); i++ {
-		env.Define(f.Declaration.Params[i].Lexeme, args[i])
+	// Bind arguments to parameters
+	for i, param := range f.Declaration.Params {
+		if i < len(arguments) {
+			environment.Define(param.Lexeme, arguments[i])
+		} else {
+			// Handle case where fewer arguments are provided than parameters
+			environment.Define(param.Lexeme, nil)
+		}
 	}
 
-	err := i.ExecuteBlock(f.Declaration.Body, env)
+	// Execute the function body
+	err := i.ExecuteBlock(f.Declaration.Body, environment)
 	if err != nil {
-		// See if the error thrown is actually the return value
-		returnValue, ok := err.(*ReturnValue)
-		if ok {
-			// It is a return value
+		// Check if the error is actually a return statement
+		if returnValue, ok := err.(*ReturnValue); ok {
 			return returnValue.Value, nil
 		}
 		return nil, err
 	}
 
+	// If no return statement was encountered, return nil
 	return nil, nil
 }
 
 // The VisitFunctionStmt declares a function
 func (i *Interpreter) VisitFunctionStmt(stmt *expressions.Function) (interface{}, error) {
+	// log.Println("This is called first for: ", stmt.Name.Lexeme)
+	// log.Println("This is the environment: ", i.Environment.Values)
 	function := NewFunction(stmt, i.Environment)
 	i.Environment.Define(stmt.Name.Lexeme, function)
 	return nil, nil

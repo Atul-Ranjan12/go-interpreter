@@ -59,3 +59,23 @@ func (e *Environment) Get(name *token.Token) (interface{}, error) {
 	// If we've reached here, the variable is not found in any scope
 	return nil, fmt.Errorf("Undefined variable %s.", name.Lexeme)
 }
+
+// GetAt gets the value at a distance
+func (e *Environment) GetAt(distance int, name string) interface{} {
+	return e.Ancestor(distance).Values[name]
+}
+
+// AssignAt assigns the value at a distance
+func (e *Environment) AssignAt(distance int, name *token.Token, value interface{}) {
+	e.Ancestor(distance).Values[name.Lexeme] = value
+}
+
+// Ancestor gets the environment at a distance
+func (e *Environment) Ancestor(distance int) *Environment {
+	env := e
+	for i := 0; i < distance; i++ {
+		env = env.Enclosing
+	}
+
+	return env
+}

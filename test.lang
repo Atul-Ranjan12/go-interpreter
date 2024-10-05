@@ -1,12 +1,9 @@
-fun makeCounter() {
-  var i = 0;
-  fun count() {
-    i = i + 1;
-    print i;
-  }
+fun fib(n) {
+    if (n == 1 or n == 0) {
+        return 1;
+    }
 
-  return count;
+    return fib(n -1) + fib(n-2);
 }
 
-var func = makeCounter();
-func();
+print fib(32);
