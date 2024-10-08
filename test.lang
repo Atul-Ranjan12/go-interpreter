@@ -1,16 +1,35 @@
-class Animal {
+struct Animal {
     construct() {
         this.type = "Lion";
-        print "Constructed";
+        println "Constructed";
         return true;
     }
 
     makeSound() {
-
-        print this.type;
+        println this.type;
     }
 }
 
+def add(a, b) {
+    return a + b;
+}
+
+def fib(n) {
+    if (n <= 1) {
+        return 1;
+    }
+
+    return fib(n - 1) + fib(n - 2);
+}
+
 var a = Animal();
-print "Animal Type " + a.type;
+println "Animal Type " + a.type;
 a.makeSound();
+
+println "Addition";
+var x = 1;
+var y = 0;
+println add(x, y);
+
+println "Fib";
+println fib(22);
