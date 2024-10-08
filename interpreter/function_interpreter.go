@@ -91,9 +91,19 @@ func (f *Function) ToString() string {
 	return "<fn " + f.Declaration.Name.Lexeme + " >"
 }
 
+// Bind sets an instance to an environment
+func (f *Function) Bind(ins *Instance) *Function {
+	// Can not :: shuld not throw an error
+	env := environment.NewEnvironment(f.Closure)
+	env.Define("this", ins)
+	return NewFunction(f.Declaration, env)
+}
+
 // Call handles the calling of funciton
 func (f *Function) Call(i *Interpreter, arguments []interface{}) (interface{}, error) {
 	// Create a new environment for this function call
+	// log.Println("Calling function here")
+	// log.Println("This is the environment: ", f.Closure.Values["this"])
 	environment := environment.NewEnvironment(f.Closure)
 
 	// Bind arguments to parameters

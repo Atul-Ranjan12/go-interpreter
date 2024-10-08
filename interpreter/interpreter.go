@@ -3,6 +3,7 @@ package interpreter
 import (
 	"errors"
 	"fmt"
+	"log"
 	"reflect"
 
 	"github.com/Atul-Ranjan12/environment"
@@ -56,10 +57,13 @@ func (i *Interpreter) Resolve(expr expressions.Expr, depth int) {
 
 // LookUpVariable looks up a variable in the locals map
 func (i *Interpreter) LookupVariable(name *token.Token, expr expressions.Expr) (interface{}, error) {
+	// log.Println("Reached here in lookup variable: This is locals: ", i.Locals)
 	distance, ok := i.Locals[expr]
 	if !ok {
 		return i.Globals.Get(name)
 	}
+	// log.Println("This is distance: ", distance)
+	log.Println(i.Environment.Enclosing.Values)
 	return i.Environment.GetAt(distance, name.Lexeme), nil
 }
 
@@ -194,6 +198,7 @@ func (i *Interpreter) VisitExprStatementStmt(stmt *expressions.ExprStatement) (i
 // VisitPrintStatement evaluates each print statement
 func (i *Interpreter) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (interface{}, error) {
 	// log.Println("Reaching here for print statement: ")
+	// log.Println("Reached here in visitPrint")
 	value, err := i.Evaluate(stmt.Expression)
 	if err != nil {
 		return nil, err

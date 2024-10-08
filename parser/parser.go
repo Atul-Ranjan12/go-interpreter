@@ -235,6 +235,10 @@ func (p *Parser) Primary() (expressions.Expr, error) {
 		return &expressions.Literal{Value: p.Prev().Literal}, nil
 	}
 
+	if p.Match(token.THIS) {
+		return &expressions.This{Keyword: *p.Prev()}, nil
+	}
+
 	if p.Match(token.IDENTIFIER) {
 		return &expressions.Variable{Name: *p.Prev()}, nil
 	}

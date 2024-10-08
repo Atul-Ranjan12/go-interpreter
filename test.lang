@@ -1,8 +1,15 @@
 class Animal {
+    construct() {
+        this.type = "Lion";
+        print "Constructed";
+    }
+
     makeSound() {
-        print "roar";
+
+        print this.type;
     }
 }
 
 var a = Animal();
+print "Animal Type " + a.type;
 a.makeSound();

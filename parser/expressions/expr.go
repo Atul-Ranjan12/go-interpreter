@@ -13,6 +13,7 @@ type ExprVisitor interface {
 	VisitCallExpr(expr *Call) (interface{}, error)
 	VisitGetExpr(expr *Get) (interface{}, error)
 	VisitSetExpr(expr *Set) (interface{}, error)
+	VisitThisExpr(expr *This) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
@@ -94,6 +95,17 @@ var _ Expr = (*Set)(nil)
 
 func (e *Set) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitSetExpr(e)
+}
+
+// These are functions for This 
+type This struct {
+	Keyword token.Token
+}
+
+var _ Expr = (*This)(nil)
+
+func (e *This) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitThisExpr(e)
 }
 
 // These are functions for Grouping 

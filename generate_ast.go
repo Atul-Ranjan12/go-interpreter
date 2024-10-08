@@ -79,6 +79,7 @@ func main() {
 		{"Call", []string{"Callee Expr", "Paren token.Token", "Arguments []Expr"}},
 		{"Get", []string{"Object Expr", "Name token.Token"}},
 		{"Set", []string{"Object Expr", "Name token.Token", "Value Expr"}},
+		{"This", []string{"Keyword token.Token"}},
 		{"Grouping", []string{"Expression Expr"}},
 		{"Literal", []string{"Value interface{}"}},
 		{"Unary", []string{"Operator token.Token", "Right Expr"}},

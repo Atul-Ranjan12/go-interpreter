@@ -62,7 +62,10 @@ func (e *Environment) Get(name *token.Token) (interface{}, error) {
 
 // GetAt gets the value at a distance
 func (e *Environment) GetAt(distance int, name string) interface{} {
-	return e.Ancestor(distance).Values[name]
+	// log.Println("This is e.Ancestor: ", e.Ancestor(distance).Values)
+	val := e.Ancestor(distance).Values[name]
+	// log.Println("This is what we got for this: ", val)
+	return val
 }
 
 // AssignAt assigns the value at a distance

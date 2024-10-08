@@ -8,6 +8,8 @@ import (
 	"github.com/Atul-Ranjan12/token"
 )
 
+const CLASS_CONSTRUCTOR_NAME string = "construct"
+
 // Class represents a class in runtime
 type Class struct {
 	Name    string
@@ -53,11 +55,31 @@ func (c *Class) ToString() string {
 // Call method for the class creates an instance
 func (c *Class) Call(interpreter *Interpreter, arguments []interface{}) (interface{}, error) {
 	classInstance := NewInstance(c)
+
+	constructor, err := c.FindMethod(CLASS_CONSTRUCTOR_NAME)
+	if err != nil {
+		return nil, err
+	}
+
+	if constructor != nil {
+		// There exists a constructor, bind the constructor to the
+		// method and execute it
+		_, err := constructor.Bind(classInstance).Call(interpreter, arguments)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return classInstance, nil
 }
 
+// Arity returns the arity for the class
 func (c *Class) Arity() int {
-	return 0
+	constructor, err := c.FindMethod(CLASS_CONSTRUCTOR_NAME)
+	if err != nil || constructor == nil {
+		return 0
+	}
+	return constructor.Arity()
 }
 
 // FindMethod finds the method and returns it
@@ -78,7 +100,8 @@ func (ins *Instance) Get(name *token.Token) (interface{}, error) {
 	if fn, err := ins.ClassName.FindMethod(name.Lexeme); err == nil {
 		if fn != nil {
 			// There is a method
-			return fn, nil
+			// log.Println("Reaching here")
+			return fn.Bind(ins), nil
 		}
 	} else {
 		return nil, err
@@ -123,13 +146,14 @@ func (i *Interpreter) VisitGetExpr(expr *expressions.Get) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-
+		// log.Println("Getting val: ", val)
 		return val, nil
 	}
 
 	return nil, errors.New("Only objects have properties")
 }
 
+// VisitSetExpr handles setting fields in objects
 // VisitSetExpr handles setting fields in objects
 func (i *Interpreter) VisitSetExpr(expr *expressions.Set) (interface{}, error) {
 	object, err := i.Evaluate(expr.Object)
@@ -148,6 +172,19 @@ func (i *Interpreter) VisitSetExpr(expr *expressions.Set) (interface{}, error) {
 	}
 
 	objectInstance.Set(&expr.Name, val)
+
+	return val, nil
+}
+
+// VisitThisExpr handles when it encounters a this function
+func (i *Interpreter) VisitThisExpr(expr *expressions.This) (interface{}, error) {
+
+	// log.Println("Reached here in visit this")
+
+	val, err := i.LookupVariable(&expr.Keyword, expr)
+	if err != nil {
+		return nil, err
+	}
 
 	return val, nil
 }

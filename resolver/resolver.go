@@ -3,6 +3,7 @@ package resolver
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/Atul-Ranjan12/interpreter"
 	"github.com/Atul-Ranjan12/parser/expressions"
@@ -11,16 +12,26 @@ import (
 
 type FunctionType int
 
+// Function enum
 const (
 	FunctionTypeNone FunctionType = iota
 	FunctionTypeFunction
 	FunctionTypeMethod
 )
 
+type ClassType int
+
+// Class Enum enum
+const (
+	ClassTypeNone ClassType = iota
+	ClassTypeClass
+)
+
 type Resolver struct {
 	Interpreter     *interpreter.Interpreter
 	Scopes          []map[string]bool
 	CurrentFunction FunctionType
+	CurrentClass    ClassType
 	FunctionDepth   int
 }
 
@@ -32,6 +43,7 @@ func NewResolver(interpreter *interpreter.Interpreter) *Resolver {
 		Interpreter:     interpreter,
 		Scopes:          []map[string]bool{},
 		CurrentFunction: FunctionTypeNone,
+		CurrentClass:    ClassTypeNone,
 	}
 }
 
@@ -90,17 +102,23 @@ func (r *Resolver) Define(name token.Token) {
 }
 
 func (r *Resolver) ResolveLocal(expr expressions.Expr, name token.Token) {
+	log.Printf("Resolving local: %s", name.Lexeme)
 	for i := len(r.Scopes) - 1; i >= 0; i-- {
 		if _, ok := r.Scopes[i][name.Lexeme]; ok {
-			depth := len(r.Scopes) - 1 - i
-			if r.FunctionDepth > 0 && depth >= r.FunctionDepth {
-				r.Interpreter.Resolve(expr, 0) // It's a global variable for this function
-			} else {
-				r.Interpreter.Resolve(expr, depth)
-			}
-			return
+			// Found it in scope
+			r.Interpreter.Resolve(expr, len(r.Scopes)-1-i)
+			// depth := len(r.Scopes) - 1 - i
+			// log.Printf("Found %s at depth %d", name.Lexeme, depth)
+			// if r.FunctionDepth > 0 && depth >= r.FunctionDepth {
+			// 	log.Println("Got here for: ", name.Lexeme)
+			// 	r.Interpreter.Resolve(expr, 0) // It's a global variable for this function
+			// } else {
+			// 	r.Interpreter.Resolve(expr, depth)
+			// }
+			// return
 		}
 	}
+	log.Printf("%s not found in local scopes, assuming global", name.Lexeme)
 	// Not found in any scope, it's a global
 }
 
@@ -286,11 +304,21 @@ func (r *Resolver) VisitSetExpr(expr *expressions.Set) (interface{}, error) {
 }
 
 func (r *Resolver) VisitClassStmt(stmt *expressions.Class) (interface{}, error) {
+	enclosingClass := r.CurrentClass
+	r.CurrentClass = ClassTypeClass
+
 	if err := r.Declare(stmt.Name); err != nil {
 		return nil, err
 	}
 
 	r.Define(stmt.Name)
+
+	// Begin scope
+	r.BeginScope()
+
+	// Add this to the scope
+	r.Scopes[len(r.Scopes)-1]["this"] = true
+	log.Print("These are scopes at the moment: ", r.Scopes)
 
 	for _, function := range stmt.Methods {
 		declaration := FunctionTypeMethod
@@ -300,5 +328,19 @@ func (r *Resolver) VisitClassStmt(stmt *expressions.Class) (interface{}, error) 
 		}
 	}
 
+	r.EndScope()
+
+	r.CurrentClass = enclosingClass
+
+	return nil, nil
+}
+
+func (r *Resolver) VisitThisExpr(expr *expressions.This) (interface{}, error) {
+	if r.CurrentClass == ClassTypeNone {
+		return nil, errors.New("Cannot use this keyword outside of the class")
+	}
+
+	// log.Println("Resolving local this here")
+	r.ResolveLocal(expr, expr.Keyword)
 	return nil, nil
 }

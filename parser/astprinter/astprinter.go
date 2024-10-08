@@ -223,8 +223,29 @@ func (p *ASTPrinter) VisitReturnStmt(stmt *expressions.Return) (interface{}, err
 	return p.parenthesize("return", stmt.Value)
 }
 
+// Add this method to your ASTPrinter struct
+
+func (p *ASTPrinter) VisitThisExpr(expr *expressions.This) (interface{}, error) {
+	return "this", nil
+}
+
+// You might also want to update or add these methods if they're not already present or complete:
+
 func (p *ASTPrinter) VisitClassStmt(stmt *expressions.Class) (interface{}, error) {
-	return p.parenthesize("class", nil)
+	var builder strings.Builder
+	builder.WriteString("(class ")
+	builder.WriteString(stmt.Name.Lexeme)
+	builder.WriteString(" ")
+	for _, method := range stmt.Methods {
+		result, err := method.Accept(p)
+		if err != nil {
+			return nil, err
+		}
+		builder.WriteString(result.(string))
+		builder.WriteString(" ")
+	}
+	builder.WriteString(")")
+	return builder.String(), nil
 }
 
 func (p *ASTPrinter) VisitGetExpr(expr *expressions.Get) (interface{}, error) {
