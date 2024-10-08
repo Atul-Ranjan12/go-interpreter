@@ -16,27 +16,39 @@ Lang interpreter is implemented in go
 Lang's grammar is designed to be intuitive and easy to read. Here's a simplified version of the grammar:
 
 ```
-program        → declaration* EOF
-declaration    → structDecl | funDecl | varDecl | statement
-structDecl     → "struct" IDENTIFIER "{" function* "}"
-funDecl        → "def" function
-varDecl        → "var" IDENTIFIER ("=" expression)? ";"
-statement      → exprStmt | printStmt | block | ifStmt | whileStmt | forStmt | returnStmt | breakStmt
-expression     → assignment
-assignment     → (call ".")? IDENTIFIER "=" assignment | logicOr
-logicOr        → logicAnd ("or" logicAnd)*
-logicAnd       → equality ("and" equality)*
-equality       → comparison (("!=" | "==") comparison)*
-comparison     → term ((">" | ">=" | "<" | "<=") term)*
-term           → factor (("-" | "+") factor)*
-factor         → unary (("/" | "*") unary)*
-unary          → ("!" | "-") unary | call
-call           → primary ("(" arguments? ")" | "." IDENTIFIER)*
-primary        → "true" | "false" | "nil" | "this" | NUMBER | STRING | IDENTIFIER | "(" expression ")"
-function       → IDENTIFIER "(" parameters? ")" block
-parameters     → IDENTIFIER ("," IDENTIFIER)*
-arguments      → expression ("," expression)*
-block          → "{" declaration* "}"
+program -> declaration* EOF ;
+statement -> ifStatement | exprStatement | printStatement | forStatement | whileStatement | returnStatements | block;
+returnStatement -> return expression ;
+forStatement -> for ( varDeclaration | expression ; expression? ; expression? ) statement;
+whileStatement -> while ( expression ) statement ;
+ifStatement -> if ( expression ) statement (else statement)?
+block -> { declaration* }
+declaration -> funcDeclaration | classDeclaration | varDeclaration | statement | breakStatement ;
+classDeclaration -> class IDENTIFIER { function* }
+funcDeclaration -> fun function ;
+function -> IDENTIFIER ( parameters? ) block;
+parameters -> IDENTIFIER ( , IDENTIFIER )*
+breakStatement -> break ;
+varDeclaration -> var + IDENTIFIER + ( = expression )? ;
+exprStatement -> expression ;
+printStatement -> print ( expression ) ;
+
+Grammar for expressions
+
+expression -> assignment
+assignment -> (call .)?IDENTIFIER = assignment | logic_or
+logic_or -> logic_and or logic_and
+logic_and -> equality ( and equality )*
+equality -> comparison ( ( != | == ) comparison)*
+comparison -> term ( ( > | >= | < | <= ) term )*
+term -> factor ( ( / | * ) factor)*
+factor -> unary ( ( + | - ) unary)*
+unary -> ( ! | - ) unary | call
+call -> primary (( arguments? ) | . IDENTIFIER)* ;
+arguments -> expression ( , expression )* ;
+primary -> NUMBER | STRING | "true" | "false" | "nil"
+			  | "(" expression ")" | identifier
+
 ```
 
 ## Example Syntax
