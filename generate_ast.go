@@ -77,6 +77,8 @@ func main() {
 		{"Logical", []string{"Left Expr", "Right Expr", "Operator token.Token"}},
 		{"Binary", []string{"Left Expr", "Operator token.Token", "Right Expr"}},
 		{"Call", []string{"Callee Expr", "Paren token.Token", "Arguments []Expr"}},
+		{"Get", []string{"Object Expr", "Name token.Token"}},
+		{"Set", []string{"Object Expr", "Name token.Token", "Value Expr"}},
 		{"Grouping", []string{"Expression Expr"}},
 		{"Literal", []string{"Value interface{}"}},
 		{"Unary", []string{"Operator token.Token", "Right Expr"}},
@@ -88,6 +90,7 @@ func main() {
 	}
 	err = defineAst(outputDir, "Stmt", []AstType{
 		{"Block", []string{"Statements []Stmt"}},
+		{"Class", []string{"Name token.Token", "Methods []*Function"}},
 		{"ExprStatement", []string{"Expression Expr"}},
 		{"PrintStatement", []string{"Expression Expr"}},
 		{"Return", []string{"Keyword token.Token", "Value Expr"}},

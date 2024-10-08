@@ -8,6 +8,7 @@ type Stmt interface {
 
 type StmtVisitor interface {
 	VisitBlockStmt(stmt *Block) (interface{}, error)
+	VisitClassStmt(stmt *Class) (interface{}, error)
 	VisitExprStatementStmt(stmt *ExprStatement) (interface{}, error)
 	VisitPrintStatementStmt(stmt *PrintStatement) (interface{}, error)
 	VisitReturnStmt(stmt *Return) (interface{}, error)
@@ -26,6 +27,18 @@ var _ Stmt = (*Block)(nil)
 
 func (e *Block) Accept(visitor StmtVisitor) (interface{}, error) {
 	return visitor.VisitBlockStmt(e)
+}
+
+// These are functions for Class 
+type Class struct {
+	Name token.Token
+	Methods []*Function
+}
+
+var _ Stmt = (*Class)(nil)
+
+func (e *Class) Accept(visitor StmtVisitor) (interface{}, error) {
+	return visitor.VisitClassStmt(e)
 }
 
 // These are functions for ExprStatement 

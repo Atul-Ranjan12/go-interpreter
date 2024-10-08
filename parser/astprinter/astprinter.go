@@ -223,6 +223,30 @@ func (p *ASTPrinter) VisitReturnStmt(stmt *expressions.Return) (interface{}, err
 	return p.parenthesize("return", stmt.Value)
 }
 
+func (p *ASTPrinter) VisitClassStmt(stmt *expressions.Class) (interface{}, error) {
+	return p.parenthesize("class", nil)
+}
+
+func (p *ASTPrinter) VisitGetExpr(expr *expressions.Get) (interface{}, error) {
+	object, err := expr.Object.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	return fmt.Sprintf("(get %v %s)", object, expr.Name.Lexeme), nil
+}
+
+func (p *ASTPrinter) VisitSetExpr(expr *expressions.Set) (interface{}, error) {
+	object, err := expr.Object.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	value, err := expr.Value.Accept(p)
+	if err != nil {
+		return nil, err
+	}
+	return fmt.Sprintf("(set %v %s %v)", object, expr.Name.Lexeme, value), nil
+}
+
 func main() {
 	ExampleASTPrinter()
 }

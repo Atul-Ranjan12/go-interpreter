@@ -1,47 +1,20 @@
 package resolver
 
 import (
+	"errors"
 	"fmt"
-	"log"
-	"strings"
 
 	"github.com/Atul-Ranjan12/interpreter"
-	"github.com/Atul-Ranjan12/parser/astprinter"
 	"github.com/Atul-Ranjan12/parser/expressions"
 	"github.com/Atul-Ranjan12/token"
 )
 
 type FunctionType int
 
-func PrintAST(stmt expressions.Stmt, depth int) {
-	printer := astprinter.NewAstPrinter()
-	result, err := stmt.Accept(printer)
-	if err != nil {
-		log.Printf("Error printing AST: %v", err)
-		return
-	}
-
-	indent := strings.Repeat("  ", depth)
-	fmt.Printf("%s%s\n", indent, result)
-
-	switch s := stmt.(type) {
-	case *expressions.Block:
-		for _, subStmt := range s.Statements {
-			PrintAST(subStmt, depth+1)
-		}
-	case *expressions.If:
-		PrintAST(s.ThenBranch, depth+1)
-		if s.ElseBranch != nil {
-			PrintAST(s.ElseBranch, depth+1)
-		}
-	case *expressions.WhileStatement:
-		PrintAST(s.Body, depth+1)
-	}
-}
-
 const (
 	FunctionTypeNone FunctionType = iota
 	FunctionTypeFunction
+	FunctionTypeMethod
 )
 
 type Resolver struct {
@@ -78,8 +51,6 @@ func (r *Resolver) ResolveExpression(expr expressions.Expr) error {
 
 func (r *Resolver) ResolveStatements(statements []expressions.Stmt) error {
 	for _, statement := range statements {
-		// log.Println("Resolving for statement: ")
-		PrintAST(statement, 0)
 		if err := r.ResolveStatement(statement); err != nil {
 			return err
 		}
@@ -133,19 +104,29 @@ func (r *Resolver) ResolveLocal(expr expressions.Expr, name token.Token) {
 	// Not found in any scope, it's a global
 }
 
-func (r *Resolver) ResolveFunction(function *expressions.Function) error {
+// ResolveFunction resolves different types of functions
+func (r *Resolver) ResolveFunction(function *expressions.Function, funcType FunctionType) (interface{}, error) {
+	enclosingFunction := r.CurrentFunction
+	r.CurrentFunction = funcType
+
+	r.FunctionDepth++
+	defer func() {
+		r.FunctionDepth--
+		r.CurrentFunction = enclosingFunction
+	}()
+
 	r.BeginScope()
 	for _, param := range function.Params {
 		if err := r.Declare(param); err != nil {
-			return err
+			return nil, err
 		}
 		r.Define(param)
 	}
-	if err := r.ResolveStatements(function.Body); err != nil {
-		return err
-	}
+
+	err := r.ResolveStatements(function.Body)
 	r.EndScope()
-	return nil
+
+	return nil, err
 }
 
 // Visitor methods
@@ -192,21 +173,12 @@ func (r *Resolver) VisitAssignExpr(expr *expressions.Assign) (interface{}, error
 }
 
 func (r *Resolver) VisitFunctionStmt(stmt *expressions.Function) (interface{}, error) {
-	r.Declare(stmt.Name)
+	if err := r.Declare(stmt.Name); err != nil {
+		return nil, err
+	}
 	r.Define(stmt.Name)
 
-	r.FunctionDepth++
-	defer func() { r.FunctionDepth-- }()
-
-	r.BeginScope()
-	for _, param := range stmt.Params {
-		r.Declare(param)
-		r.Define(param)
-	}
-	err := r.ResolveStatements(stmt.Body)
-	r.EndScope()
-
-	return nil, err
+	return r.ResolveFunction(stmt, FunctionTypeFunction)
 }
 
 func (r *Resolver) VisitExprStatementStmt(stmt *expressions.ExprStatement) (interface{}, error) {
@@ -233,6 +205,9 @@ func (r *Resolver) VisitPrintStatementStmt(stmt *expressions.PrintStatement) (in
 }
 
 func (r *Resolver) VisitReturnStmt(stmt *expressions.Return) (interface{}, error) {
+	if r.CurrentFunction == FunctionTypeNone {
+		return nil, errors.New("Can not return from top-level code")
+	}
 	if stmt.Value != nil {
 		return nil, r.ResolveExpression(stmt.Value)
 	}
@@ -287,5 +262,43 @@ func (r *Resolver) VisitUnaryExpr(expr *expressions.Unary) (interface{}, error) 
 }
 
 func (r *Resolver) VisitBreakExprExpr(expr *expressions.BreakExpr) (interface{}, error) {
+	return nil, nil
+}
+
+func (r *Resolver) VisitGetExpr(expr *expressions.Get) (interface{}, error) {
+	if err := r.ResolveExpression(expr.Object); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (r *Resolver) VisitSetExpr(expr *expressions.Set) (interface{}, error) {
+	if err := r.ResolveExpression(expr.Value); err != nil {
+		return nil, err
+	}
+
+	if err := r.ResolveExpression(expr.Object); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (r *Resolver) VisitClassStmt(stmt *expressions.Class) (interface{}, error) {
+	if err := r.Declare(stmt.Name); err != nil {
+		return nil, err
+	}
+
+	r.Define(stmt.Name)
+
+	for _, function := range stmt.Methods {
+		declaration := FunctionTypeMethod
+		_, err := r.ResolveFunction(function, declaration)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return nil, nil
 }

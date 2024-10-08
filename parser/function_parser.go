@@ -21,6 +21,13 @@ func (p *Parser) Call() (expressions.Expr, error) {
 			if err != nil {
 				return nil, err
 			}
+		} else if p.Match(token.DOT) {
+			// Return a get expression
+			name, err := p.Consume(token.IDENTIFIER, "Expect property name after .")
+			if err != nil {
+				return nil, err
+			}
+			expr = &expressions.Get{Name: *name, Object: expr}
 		} else {
 			break
 		}

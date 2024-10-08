@@ -20,20 +20,35 @@ func PrintAST(stmt expressions.Stmt, depth int) {
 	}
 
 	indent := strings.Repeat("  ", depth)
-	fmt.Printf("%s%s\n", indent, result)
+	fmt.Printf("%s%T: %s\n", indent, stmt, result)
 
+	// Don't recursively print for statements that are already fully represented
 	switch s := stmt.(type) {
 	case *expressions.Block:
+		fmt.Printf("%sBlock with %d statements\n", indent, len(s.Statements))
 		for _, subStmt := range s.Statements {
 			PrintAST(subStmt, depth+1)
 		}
+	case *expressions.Function:
+		fmt.Printf("%sFunction body:\n", indent)
+		for _, bodyStmt := range s.Body {
+			PrintAST(bodyStmt, depth+1)
+		}
 	case *expressions.If:
+		fmt.Printf("%sIf statement\n", indent)
 		PrintAST(s.ThenBranch, depth+1)
 		if s.ElseBranch != nil {
+			fmt.Printf("%sElse branch:\n", indent)
 			PrintAST(s.ElseBranch, depth+1)
 		}
 	case *expressions.WhileStatement:
+		fmt.Printf("%sWhile statement\n", indent)
 		PrintAST(s.Body, depth+1)
+	case *expressions.Class:
+		fmt.Printf("%sClass %s with %d methods\n", indent, s.Name.Lexeme, len(s.Methods))
+		for _, method := range s.Methods {
+			PrintAST(method, depth+1)
+		}
 	}
 }
 
@@ -80,6 +95,7 @@ func main() {
 	// log.Println("Printing statements: ", statements)
 	// log.Println("Successful parse ")
 	// log.Println("\nOutput")
+	log.Println("\n\nMoving towards resolution")
 
 	// Resolve it here
 	err = lang.Resolver.ResolveStatements(statements)

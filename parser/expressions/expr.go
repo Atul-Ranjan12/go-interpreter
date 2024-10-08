@@ -11,6 +11,8 @@ type ExprVisitor interface {
 	VisitLogicalExpr(expr *Logical) (interface{}, error)
 	VisitBinaryExpr(expr *Binary) (interface{}, error)
 	VisitCallExpr(expr *Call) (interface{}, error)
+	VisitGetExpr(expr *Get) (interface{}, error)
+	VisitSetExpr(expr *Set) (interface{}, error)
 	VisitGroupingExpr(expr *Grouping) (interface{}, error)
 	VisitLiteralExpr(expr *Literal) (interface{}, error)
 	VisitUnaryExpr(expr *Unary) (interface{}, error)
@@ -67,6 +69,31 @@ var _ Expr = (*Call)(nil)
 
 func (e *Call) Accept(visitor ExprVisitor) (interface{}, error) {
 	return visitor.VisitCallExpr(e)
+}
+
+// These are functions for Get 
+type Get struct {
+	Object Expr
+	Name token.Token
+}
+
+var _ Expr = (*Get)(nil)
+
+func (e *Get) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitGetExpr(e)
+}
+
+// These are functions for Set 
+type Set struct {
+	Object Expr
+	Name token.Token
+	Value Expr
+}
+
+var _ Expr = (*Set)(nil)
+
+func (e *Set) Accept(visitor ExprVisitor) (interface{}, error) {
+	return visitor.VisitSetExpr(e)
 }
 
 // These are functions for Grouping 

@@ -20,8 +20,9 @@ import (
 // ifStatement -> if ( expression ) statement (else statement)?
 // block -> { declaration* }
 // declaration -> funcDeclaration | classDeclaration | varDeclaration | statement | breakStatement ;
+// classDeclaration -> class IDENTIFIER { function* }
 // funcDeclaration -> fun function ;
-// function -> IDENTIFIER ( parameters? );
+// function -> IDENTIFIER ( parameters? ) block;
 // parameters -> IDENTIFIER ( , IDENTIFIER )*
 // breakStatement -> break ;
 // varDeclaration -> var + IDENTIFIER + ( = expression )? ;
@@ -31,7 +32,7 @@ import (
 // Grammar for expressions
 
 // expression -> assignment
-// assignment -> IDENTIFIER = assignment | logic_or
+// assignment -> (call .)?IDENTIFIER = assignment | logic_or
 // logic_or -> logic_and or logic_and
 // logic_and -> equality ( and equality )*
 // equality -> comparison ( ( != | == ) comparison)*
@@ -39,7 +40,7 @@ import (
 // term -> factor ( ( / | * ) factor)*
 // factor -> unary ( ( + | - ) unary)*
 // unary -> ( ! | - ) unary | call
-// call -> primary ( arguments? )* ;
+// call -> primary (( arguments? ) | . IDENTIFIER)* ;
 // arguments -> expression ( , expression )* ;
 // primary -> NUMBER | STRING | "true" | "false" | "nil"
 // 			  | "(" expression ")" | identifier
@@ -81,17 +82,24 @@ func (p *Parser) Assignment() (expressions.Expr, error) {
 			return nil, err
 		}
 		// Check if the assignment target is valid
-		v, ok := expr.(*expressions.Variable)
-		if !ok {
-			// Not a valid assignment
-			return nil, errors.New("Invalid assignment target")
+		if v, ok := expr.(*expressions.Variable); ok {
+			name := v.Name
+			return &expressions.Assign{
+				Name:  name,
+				Value: right,
+			}, nil
 		}
-		// Valid assignment
-		name := v.Name
-		return &expressions.Assign{
-			Name:  name,
-			Value: right,
-		}, nil
+
+		if v, ok := expr.(*expressions.Get); ok {
+			return &expressions.Set{
+				Name:   v.Name,
+				Object: v.Object,
+				Value:  right,
+			}, nil
+		}
+
+		// Not a variable, neither a set expression
+		return nil, errors.New("Invalid assignment target")
 	}
 
 	return expr, nil
@@ -252,6 +260,9 @@ func (p *Parser) Primary() (expressions.Expr, error) {
 
 // Declaration handles each line of the program
 func (p *Parser) Declaration() (expressions.Stmt, error) {
+	if p.Match(token.CLASS) {
+		return p.ClassDeclaration()
+	}
 	if p.Match(token.FUN) {
 		return p.Function("function")
 	}
