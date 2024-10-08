@@ -3,7 +3,6 @@ package interpreter
 import (
 	"errors"
 	"fmt"
-	"log"
 	"reflect"
 
 	"github.com/Atul-Ranjan12/environment"
@@ -63,7 +62,7 @@ func (i *Interpreter) LookupVariable(name *token.Token, expr expressions.Expr) (
 		return i.Globals.Get(name)
 	}
 	// log.Println("This is distance: ", distance)
-	log.Println(i.Environment.Enclosing.Values)
+	// log.Println(i.Environment.Enclosing.Values)
 	return i.Environment.GetAt(distance, name.Lexeme), nil
 }
 

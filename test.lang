@@ -2,6 +2,7 @@ class Animal {
     construct() {
         this.type = "Lion";
         print "Constructed";
+        return true;
     }
 
     makeSound() {

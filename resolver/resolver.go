@@ -3,7 +3,6 @@ package resolver
 import (
 	"errors"
 	"fmt"
-	"log"
 
 	"github.com/Atul-Ranjan12/interpreter"
 	"github.com/Atul-Ranjan12/parser/expressions"
@@ -102,7 +101,7 @@ func (r *Resolver) Define(name token.Token) {
 }
 
 func (r *Resolver) ResolveLocal(expr expressions.Expr, name token.Token) {
-	log.Printf("Resolving local: %s", name.Lexeme)
+	// log.Printf("Resolving local: %s", name.Lexeme)
 	for i := len(r.Scopes) - 1; i >= 0; i-- {
 		if _, ok := r.Scopes[i][name.Lexeme]; ok {
 			// Found it in scope
@@ -118,7 +117,7 @@ func (r *Resolver) ResolveLocal(expr expressions.Expr, name token.Token) {
 			// return
 		}
 	}
-	log.Printf("%s not found in local scopes, assuming global", name.Lexeme)
+	// log.Printf("%s not found in local scopes, assuming global", name.Lexeme)
 	// Not found in any scope, it's a global
 }
 
@@ -318,7 +317,7 @@ func (r *Resolver) VisitClassStmt(stmt *expressions.Class) (interface{}, error) 
 
 	// Add this to the scope
 	r.Scopes[len(r.Scopes)-1]["this"] = true
-	log.Print("These are scopes at the moment: ", r.Scopes)
+	// log.Print("These are scopes at the moment: ", r.Scopes)
 
 	for _, function := range stmt.Methods {
 		declaration := FunctionTypeMethod

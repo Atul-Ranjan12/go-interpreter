@@ -95,7 +95,6 @@ func main() {
 	// log.Println("Printing statements: ", statements)
 	// log.Println("Successful parse ")
 	// log.Println("\nOutput")
-	log.Println("\n\nMoving towards resolution")
 
 	// Resolve it here
 	err = lang.Resolver.ResolveStatements(statements)
@@ -109,6 +108,6 @@ func main() {
 		log.Println("Interpretation Error: ", err)
 	}
 
-	log.Println("Program execution successful")
+	log.Println("\n\nProgram execution successful")
 
 }
