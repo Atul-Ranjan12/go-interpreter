@@ -100,7 +100,7 @@ This example demonstrates:
 To run a Lang program, use the interpreter as follows:
 
 ```
-go run main.go path/to/your/program.lang
+go run cmd/main.go path/to/your/program.lang
 ```
 
 ## Implementation Details
